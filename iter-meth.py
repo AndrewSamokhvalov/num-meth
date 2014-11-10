@@ -3,26 +3,26 @@ __author__ = 'andrey'
 import numpy as np
 import time
 
-from math import *
-from matplotlib import pyplot as plt
+# from math import *
+# from matplotlib import pyplot as plt
 
 file_A = 'A.txt'
 file_b = 'b.txt'
 delimiter = ','
-
-
+mA = np.loadtxt(file_A, delimiter=delimiter)
+b = np.loadtxt(file_b, delimiter=delimiter)
 
 class Info():
-
     iteration = 0
     delay = 0
-    xk = 0
     eps = 0
+    answer = 0
 
     def description(self):
         print("iter count: %s" % self.iteration)
         print("xk: %s" % self.xk)
         print("delay: %s" % self.delay)
+
 
 class SolvingMethod():
     def isQuad(self, matr):
@@ -47,13 +47,42 @@ class SolvingMethod():
 
 
 class QR(SolvingMethod):
-    def get_beta(self, a, b):
-        return np.dot(a, b) / np.dot(a, a)
+    def _solve(self, A, Q, R, i):
+        vai = A[:, i]
+        vui = vai
 
-    def solve(self, mA, b):
+        for j in range(0, i):
+            vej = Q[:, j]
 
-        # bi = mA(,)
-        pass
+            c = np.dot(vej, vai)
+            vui = vui - c * vej
+            R[j, i] = c
+
+        nvui = np.linalg.norm(vui)
+
+        vei = vui / nvui
+        Q[:, i] = vei
+        R[i, i] = np.dot(vei, vai)
+
+    def solve(self, A, b):
+        info = Info()
+
+        [n, n] = A.shape
+
+        Q = np.zeros((n, n))
+        R = np.zeros((n, n))
+
+        for i in range(0, n):
+            self._solve(A, Q, R, i)
+
+        Q = - Q
+        R = - R
+
+        info.answer = np.dot(np.dot(np.linalg.inv(R), Q,), b)
+        return info
+
+
+
 
 
 class IIM(SolvingMethod):
@@ -61,15 +90,13 @@ class IIM(SolvingMethod):
         return np.dot(matr, xk_1) - b
 
     def get_t(self, b, matr):
-            a = np.dot(matr, b)
+        a = np.dot(matr, b)
 
-            up = np.dot(a.transpose(), b)
-            down = np.dot(a.transpose(), a)
-            return up / down
+        return np.dot(a.transpose(), b) / np.dot(a.transpose(), a)
 
-    def solve(self, mA, b, eps):
+    def solve(self, mA, b):
         info = Info()
-        info.eps = eps
+        info.eps = 0.1
 
         start = time.time()
         if not self.isSymetric(mA):
@@ -77,18 +104,19 @@ class IIM(SolvingMethod):
             mA = np.dot(mA.transpose(), mA)
 
         xk = b.copy()
-        answer = np.dot(np.linalg.inv(mA), b)
-        dif = [eps + 1]
-        while max(dif) > eps:
+
+
+        prev_xk = xk + 10 * info.eps
+
+        while info.eps < np.linalg.norm(prev_xk - xk):
             rk = self.get_r(xk, mA, b)
             tk_1 = self.get_t(rk, mA)
 
+            prev_xk = xk.copy()
             xk = xk - tk_1 * rk
-            dif = answer - xk
             info.iteration += 1
 
-
-        info.xk = xk
+        info.answer = xk
         info.delay = time.time() - start
 
         return info
@@ -96,20 +124,26 @@ class IIM(SolvingMethod):
 
 iim = IIM()
 qr = QR()
-eps = 1.0 / pow(10.0, 0)
 
-
-linfo = []
-for n in range(3, 30):
+for n in range(3, 20):
 
     mA = np.random.rand(n, n)
     b = np.random.rand(n)
-    linfo.append(iim.solve(mA, b, eps))
-    print("%s : %s" % (n, np.linalg.cond(mA)))
 
+    answer = np.dot(np.linalg.inv(mA), b)
 
-plt.plot(list(map(lambda info: info.delay, linfo)))
-plt.show()
+    info_qr = qr.solve(mA, b)
+    info_iim = iim.solve(mA, b)
+    
+    print("Answer")
+    print(answer)
+
+    print("QR:")
+    print(info_qr.answer)
+
+    print("IIM:")
+    print(info_iim.answer)
+
 
 
 
