@@ -22,8 +22,6 @@ class Info():
         info.difference = (self.difference + other.difference) / 2
         return info
 
-
-
     def description(self):
         print("iter count: %s" % self.iteration)
         print("xk: %s" % self.xk)
@@ -48,7 +46,7 @@ class SolvingMethod():
                     return False
         return True
 
-    def isconvergence(self, mB):
+    def isConvergence(self, mB):
         return max(sum(abs(mB))) < 1
 
 
@@ -104,11 +102,15 @@ class IIM(SolvingMethod):
         info.eps = pow(10, -3)
 
         start = time.time()
+
+
         if not self.isSymetric(mA):
             b = np.dot(mA.transpose(), b)
             mA = np.dot(mA.transpose(), mA)
 
+        # init xk with vector b
         xk = b.copy()
+
 
         isContinue = True
         while isContinue:
@@ -128,7 +130,6 @@ class IIM(SolvingMethod):
 
 
 N = 500
-c = 3
 
 iim = IIM()
 qr = QR()
@@ -136,20 +137,23 @@ qr = QR()
 l_info_qr = []
 l_info_iim = []
 
-def get_info(f, infos):
-    return list(map(f, infos))
-
 for n in range(3, N):
+
+    # create random matrix A and vector b
     mA = np.random.rand(n, n)
     b = np.random.rand(n)
 
+    # calculate real answer
     real_answer = np.dot(np.linalg.inv(mA), b)
 
+    # solve SLE with QR ,IIM and get info
     info_qr = qr.solve(mA, b)
     info_iim = iim.solve(mA, b)
 
+    # calculate error
     info_qr.difference = np.linalg.norm(info_qr.answer - real_answer)
     info_iim.difference = np.linalg.norm(info_iim.answer - real_answer)
+
 
     l_info_qr.append(info_qr)
     l_info_iim.append(info_iim)
@@ -157,12 +161,16 @@ for n in range(3, N):
     print("Progress: %.1f" % (n / N * 100), end="\r")
 
 
+# get list of delay from info
 l_qr_delays = [info.delay for info in l_info_qr]
 l_iim_delays = [info.delay for info in l_info_iim]
 
+# get list of error from info
 l_qr_err = [info.difference for info in l_info_qr]
 l_iim_err = [info.difference for info in l_info_iim]
 
+
+# setting plot
 plt.title("QR IIM comparison")
 plt.xlabel("N")
 plt.ylabel("T(n)")
@@ -171,6 +179,7 @@ print("QR average error: %f" % (sum(l_qr_err) / len(l_qr_err)))
 print("IIM average error: %f " % (sum(l_iim_err) / len(l_iim_err)))
 
 
+# plot lists
 plt.plot(l_qr_delays, 'o', label='qr delay')
 plt.plot(l_iim_delays, 's', label='iim delay')
 
